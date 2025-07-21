@@ -216,15 +216,61 @@ function App() {
     setMessages(prev => [...prev, `You: ${command}`]);
     setAgentStatus('processing');
     
-    // Simulate processing
-    setTimeout(() => {
+    try {
+      // Send command to backend API
+      const response = await fetch('http://localhost:3001/api/claude', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: command })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       setAgentStatus('responding');
-      setMessages(prev => [...prev, `Queen Agent: Processing "${command}". Memory systems online. Executing with learned patterns...`]);
       
-      setTimeout(() => {
-        setAgentStatus('idle');
-      }, 2000);
-    }, 1500);
+      // Handle the streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.type === 'chunk' || data.type === 'result') {
+                  fullResponse += data.content;
+                } else if (data.type === 'complete') {
+                  fullResponse = data.content || fullResponse;
+                }
+              } catch (e) {
+                // Ignore malformed JSON
+              }
+            }
+          }
+        }
+      }
+      
+      // Add the complete response to messages
+      setMessages(prev => [...prev, `Queen Agent: ${fullResponse || 'I processed your request successfully.'}`]);
+      
+    } catch (error) {
+      console.error('API Error:', error);
+      setMessages(prev => [...prev, `Queen Agent: I apologize, but I'm experiencing a connection issue. Please ensure the backend server is running on port 3001. Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+    } finally {
+      setAgentStatus('idle');
+    }
   };
 
   return (
