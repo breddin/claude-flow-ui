@@ -2,6 +2,34 @@ import React, { useState, useEffect } from 'react';
 import QueenAgentImage from './QueenAgent.webp';
 import './App.css';
 
+// Speech Recognition Types
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
+}
+
 // Queen Agent Image Component with Oval Crop
 function QueenAgent({ status }: { status: 'idle' | 'listening' | 'processing' | 'responding' }) {
   const [animationPhase, setAnimationPhase] = useState(0);
@@ -76,6 +104,42 @@ function QueenAgent({ status }: { status: 'idle' | 'listening' | 'processing' | 
 function InputPanel({ onSubmit }: { onSubmit: (message: string) => void }) {
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    // Initialize Speech Recognition if available
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'en-US';
+      
+      recognitionInstance.onstart = () => {
+        setIsListening(true);
+      };
+      
+      recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsListening(false);
+      };
+      
+      recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        // Fallback message for errors
+        setInput(`Voice input error: ${event.error}`);
+      };
+      
+      recognitionInstance.onend = () => {
+        setIsListening(false);
+      };
+      
+      setRecognition(recognitionInstance);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,12 +150,21 @@ function InputPanel({ onSubmit }: { onSubmit: (message: string) => void }) {
   };
 
   const startVoiceInput = () => {
-    setIsListening(true);
-    // Voice recognition would be implemented here
-    setTimeout(() => {
-      setIsListening(false);
-      setInput("Voice input: Deploy the application");
-    }, 2000);
+    if (recognition) {
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error);
+        setInput('Voice recognition unavailable');
+      }
+    } else {
+      // Fallback for browsers without speech recognition
+      setIsListening(true);
+      setTimeout(() => {
+        setIsListening(false);
+        setInput("Voice input: Speech recognition not supported in this browser");
+      }, 2000);
+    }
   };
 
   return (
@@ -102,6 +175,10 @@ function InputPanel({ onSubmit }: { onSubmit: (message: string) => void }) {
           className={`voice-button ${isListening ? 'listening' : ''}`}
           onClick={startVoiceInput}
           disabled={isListening}
+          title={recognition ? 
+            (isListening ? 'Listening... Speak now' : 'Click to start voice input') : 
+            'Voice recognition not supported in this browser'
+          }
         >
           {isListening ? '🎤 Listening...' : '🎤 Voice'}
         </button>
