@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  claude-flow-ui:
+    build: .
+    ports:
+      - "9001:9001"
+    container_name: claude-flow-ui
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      - NODE_ENV=production
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLAUDE_CODE_USE_BEDROCK=${CLAUDE_CODE_USE_BEDROCK:-0}
+      - CLAUDE_CODE_USE_VERTEX=${CLAUDE_CODE_USE_VERTEX:-0}
+      - DEVCONTAINER=false
+    volumes:
+      - claude-flow-logs:/var/log
+    networks:
+      - claude-flow-network
+
+volumes:
+  claude-flow-logs:
+
+networks:
+  claude-flow-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

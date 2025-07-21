@@ -1,0 +1,79 @@
+{
+  "name": "Claude Flow UI - Secure Development Container",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "target": "0",
+    "args": {
+      "TZ": "UTC"
+    }
+  },
+  "containerEnv": {
+    "DEVCONTAINER": "true",
+    "NODE_ENV": "development",
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+    "CLAUDE_CODE_USE_BEDROCK": "${localEnv:CLAUDE_CODE_USE_BEDROCK:0}",
+    "CLAUDE_CODE_USE_VERTEX": "${localEnv:CLAUDE_CODE_USE_VERTEX:0}"
+  },
+  "remoteUser": "node",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "source=commandhistory,target=/commandhistory,type=volume"
+  ],
+  "forwardPorts": [3000, 9001],
+  "portsAttributes": {
+    "3000": {
+      "label": "Claude Flow UI (Development - Hot Reload)",
+      "onAutoForward": "openBrowser"
+    },
+    "9001": {
+      "label": "Claude Flow UI (Production Preview)",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh && npm install",
+  "postStartCommand": "./start-dev.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-json",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode.remote-repositories",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "anthropic.claude-dev"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/bin/zsh"
+          }
+        },
+        "editor.formatOnSave": true,
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "files.watcherExclude": {
+          "**/node_modules/**": true
+        }
+      }
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": "true"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    }
+  },
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=SYS_ADMIN",
+    "--security-opt=apparmor:unconfined"
+  ],
+  "shutdownAction": "stopContainer"
+}

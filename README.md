@@ -1,4 +1,18 @@
-# Getting Started with Create React App
+# Claude Flow UI
+
+This project implements a secure, memory-enhanced AI agent orchestration platform with 3D visualization, built with React and powered by Anthropic's Claude Code SDK.
+
+## 📋 Documentation
+
+For comprehensive guidance documentation, see **[`_DOCUMENTATION_INDEX.md`](_DOCUMENTATION_INDEX.md)** which organizes all architectural and implementation guides.
+
+### Quick Links:
+- **🧠 Memory Architecture**: [`_API_AGENT_MEMORY.md`](_API_AGENT_MEMORY.md)
+- **🔒 Security Implementation**: [`_SECURITY.md`](_SECURITY.md)  
+- **🔧 SDK Integration**: [`_CLAUDE_CODE_SDK_INTEGRATION.md`](_CLAUDE_CODE_SDK_INTEGRATION.md)
+- **📊 Migration Strategy**: [`_API_MIGRATION_ANALYSIS.md`](_API_MIGRATION_ANALYSIS.md)
+
+## Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
