@@ -15,8 +15,11 @@ RUN npm ci --legacy-peer-deps
 # Copy source code
 COPY . .
 
-# Set environment variable for build
+# Set environment variables for build and runtime
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ENV WDS_SOCKET_HOST=localhost
+ENV WDS_SOCKET_PORT=9000
+ENV WDS_SOCKET_PATH=/ws
 
 # Expose frontend port
 EXPOSE 3000

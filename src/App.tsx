@@ -362,6 +362,7 @@ function App() {
   const [messages, setMessages] = useState<string[]>([]);
   const [orchestrationActive, setOrchestrationActive] = useState(false);
   const [currentStage, setCurrentStage] = useState<'analysis' | 'research' | 'implementation' | 'synthesis' | 'complete'>('analysis');
+  const [showCompletedStatus, setShowCompletedStatus] = useState(false);
   
   // Reference for auto-scrolling messages
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -495,6 +496,55 @@ function App() {
                     setResearchStatus('complete');
                   } else if (data.stage === 'implementation' || data.agent === 'implementation') {
                     setImplementationStatus('complete');
+                    
+                    // Fallback: If implementation agent completes and we're in implementation stage,
+                    // assume orchestration is complete (in case backend doesn't send orchestration_complete)
+                    if (currentStage === 'implementation') {
+                      setTimeout(() => {
+                        console.log('Fallback: Implementation agent completed, triggering orchestration completion');
+                        setCurrentStage('complete');
+                        setShowCompletedStatus(true);
+                        setMessages(prev => [...prev, `✅ Multi-agent orchestration completed successfully! (auto-detected)`]);
+                        
+                        // Keep orchestration active briefly to show completion status
+                        setTimeout(() => {
+                          setOrchestrationActive(false);
+                          setShowCompletedStatus(false);
+                          // Reset statuses after showing completion
+                          setTimeout(() => {
+                            setResearchStatus('idle');
+                            setImplementationStatus('idle');
+                            setCurrentStage('analysis');
+                          }, 1000);
+                        }, 3000);
+                      }, 2000); // Wait 2 seconds for potential orchestration_complete event
+                    }
+                  }
+                  
+                  // Additional fallback: If Queen agent responds during synthesis stage,
+                  // that typically means orchestration is complete
+                  if ((data.stage === 'synthesis' || currentStage === 'synthesis') && data.agent === 'queen') {
+                    setTimeout(() => {
+                      // Only trigger if we haven't already completed
+                      if (currentStage !== 'complete') {
+                        console.log('Fallback: Queen synthesis completed, triggering orchestration completion');
+                        setCurrentStage('complete');
+                        setShowCompletedStatus(true);
+                        setMessages(prev => [...prev, `✅ Multi-agent orchestration completed successfully! (auto-detected)`]);
+                        
+                        // Keep orchestration active briefly to show completion status
+                        setTimeout(() => {
+                          setOrchestrationActive(false);
+                          setShowCompletedStatus(false);
+                          // Reset statuses after showing completion
+                          setTimeout(() => {
+                            setResearchStatus('idle');
+                            setImplementationStatus('idle');
+                            setCurrentStage('analysis');
+                          }, 1000);
+                        }, 3000);
+                      }
+                    }, 2000); // Wait 2 seconds for potential orchestration_complete event
                   }
                   
                 } else if (data.type === 'orchestration_complete') {
@@ -503,7 +553,19 @@ function App() {
                   setResearchStatus('complete');
                   setImplementationStatus('complete');
                   setCurrentStage('complete');
-                  setOrchestrationActive(false);
+                  setShowCompletedStatus(true);
+                  
+                  // Keep orchestration active briefly to show completion status
+                  setTimeout(() => {
+                    setOrchestrationActive(false);
+                    setShowCompletedStatus(false);
+                    // Reset statuses after showing completion
+                    setTimeout(() => {
+                      setResearchStatus('idle');
+                      setImplementationStatus('idle');
+                      setCurrentStage('analysis');
+                    }, 1000);
+                  }, 3000); // Show completion for 3 seconds
                   
                   // Display all agent responses from the stages data
                   if (data.stages) {
@@ -526,6 +588,7 @@ function App() {
                     data.message;
                   setMessages(prev => [...prev, `❌ Error: ${errorMessage}`]);
                   setOrchestrationActive(false);
+                  setShowCompletedStatus(false);
                   setAgentStatus('idle');
                   setResearchStatus('idle');
                   setImplementationStatus('idle');
@@ -537,6 +600,47 @@ function App() {
           }
         }
       }
+      
+      // Final fallback: If we exit the stream but orchestration is still active,
+      // check if we should auto-complete based on agent statuses
+      setTimeout(() => {
+        if (orchestrationActive && currentStage !== 'complete') {
+          // Check if implementation agent completed but orchestration is still active
+          if (implementationStatus === 'complete' && currentStage === 'implementation') {
+            console.log('Stream ended with implementation complete - auto-completing orchestration');
+            setCurrentStage('complete');
+            setShowCompletedStatus(true);
+            setMessages(prev => [...prev, `✅ Multi-agent orchestration completed successfully! (stream auto-complete)`]);
+            
+            setTimeout(() => {
+              setOrchestrationActive(false);
+              setShowCompletedStatus(false);
+              setTimeout(() => {
+                setResearchStatus('idle');
+                setImplementationStatus('idle');
+                setCurrentStage('analysis');
+              }, 1000);
+            }, 3000);
+          }
+          // Check if we're in synthesis stage (Queen should be finishing)
+          else if (currentStage === 'synthesis' && agentStatus === 'idle') {
+            console.log('Stream ended in synthesis with Queen idle - auto-completing orchestration');
+            setCurrentStage('complete');
+            setShowCompletedStatus(true);
+            setMessages(prev => [...prev, `✅ Multi-agent orchestration completed successfully! (synthesis auto-complete)`]);
+            
+            setTimeout(() => {
+              setOrchestrationActive(false);
+              setShowCompletedStatus(false);
+              setTimeout(() => {
+                setResearchStatus('idle');
+                setImplementationStatus('idle');
+                setCurrentStage('analysis');
+              }, 1000);
+            }, 3000);
+          }
+        }
+      }, 3000); // Wait 3 seconds after stream ends
       
     } catch (error) {
       console.error('API Error:', error);
@@ -561,6 +665,7 @@ function App() {
       
       setMessages(prev => [...prev, `Queen Agent: I apologize, but I encountered an issue during multi-agent orchestration: ${errorMessage}`]);
       setOrchestrationActive(false);
+      setShowCompletedStatus(false);
     } finally {
       setAgentStatus('idle');
       setResearchStatus('idle');
@@ -701,9 +806,13 @@ function App() {
         showingAdmin={false}
       />
       
-      {orchestrationActive && (
+      {(orchestrationActive || currentStage === 'complete') && (
         <div className="orchestration-status">
-          <span>🔄 Multi-Agent Orchestration Active - Stage: {currentStage.toUpperCase()}</span>
+          {currentStage === 'complete' ? (
+            <span>✅ Multi-Agent Orchestration Completed Successfully</span>
+          ) : (
+            <span>🔄 Multi-Agent Orchestration Active - Stage: {currentStage.toUpperCase()}</span>
+          )}
         </div>
       )}
       
@@ -778,7 +887,7 @@ function App() {
         <span>🧠 Memory System: Online</span>
         <span>🔗 Claude Code SDK: Connected</span>
         <span>📡 Status: {agentStatus}</span>
-        {orchestrationActive && (
+        {(orchestrationActive || showCompletedStatus) && (
           <>
             <span>🔍 Research: {researchStatus}</span>
             <span>🛠️ Implementation: {implementationStatus}</span>

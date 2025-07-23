@@ -2,6 +2,7 @@ import express from 'express';
 import pkg from 'pg';
 const { Pool } = pkg;
 import jwt from 'jsonwebtoken';
+import DataSyncService from '../services/dataSyncService.js';
 
 const router = express.Router();
 
@@ -418,6 +419,57 @@ router.get('/sessions/:id', requireAdmin, async (req, res) => {
       success: false, 
       error: 'Failed to fetch session details',
       details: error.message 
+    });
+  }
+});
+
+// Data synchronization endpoint
+router.post('/sync', requireAdmin, async (req, res) => {
+  try {
+    const { type = 'all' } = req.body;
+    
+    console.log(`🔄 Starting data sync (type: ${type}) requested by ${req.user.username}`);
+    
+    const syncService = new DataSyncService();
+    
+    try {
+      switch (type) {
+        case 'sessions':
+          await syncService.syncOrchestrationSessions();
+          break;
+        case 'agents':
+          await syncService.syncAgents();
+          break;
+        case 'tasks':
+          await syncService.syncTasks();
+          break;
+        case 'communications':
+          await syncService.syncCommunications();
+          break;
+        case 'all':
+        default:
+          await syncService.syncAll();
+          break;
+      }
+      
+      res.json({
+        success: true,
+        message: `Data synchronization (${type}) completed successfully`,
+        timestamp: new Date().toISOString(),
+        requestedBy: req.user.username
+      });
+      
+      console.log(`✅ Data sync (${type}) completed successfully`);
+    } finally {
+      await syncService.close();
+    }
+  } catch (error) {
+    console.error('Error during data synchronization:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Data synchronization failed',
+      details: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 });

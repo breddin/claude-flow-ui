@@ -8,9 +8,11 @@ const AdminDashboard = () => {
   const [communications, setCommunications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeAccordion, setActiveAccordion] = useState('sessions');
+  const [activeTab, setActiveTab] = useState('sessions');
   const [selectedSession, setSelectedSession] = useState(null);
   const [selectedAgent, setSelectedAgent] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   useEffect(() => {
     fetchAdminData();
@@ -55,6 +57,41 @@ const AdminDashboard = () => {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const syncData = async (type = 'all') => {
+    try {
+      setSyncing(true);
+      setSyncMessage('');
+      const token = localStorage.getItem('accessToken');
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:9001';
+      
+      const response = await fetch(`${apiUrl}/api/admin/sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ type })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSyncMessage(`✅ ${result.message}`);
+        // Refresh data after successful sync
+        await fetchAdminData();
+      } else {
+        setSyncMessage(`❌ Sync failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      setSyncMessage(`❌ Sync failed: ${error.message}`);
+    } finally {
+      setSyncing(false);
+      // Clear message after 5 seconds
+      setTimeout(() => setSyncMessage(''), 5000);
     }
   };
 
@@ -394,85 +431,73 @@ const AdminDashboard = () => {
     <div className="admin-dashboard">
       <div className="dashboard-header">
         <h2>🛠️ Admin Dashboard</h2>
-        <div className="dashboard-stats">
-          <div className="stat-item">
-            <span className="stat-number">{sessions.length}</span>
-            <span className="stat-label">Sessions</span>
+        <div className="dashboard-controls">
+          <div className="sync-controls">
+            <button 
+              className={`btn-sync ${syncing ? 'syncing' : ''}`}
+              onClick={() => syncData('all')}
+              disabled={syncing}
+            >
+              {syncing ? '🔄 Syncing...' : '🔄 Sync Data'}
+            </button>
+            {syncMessage && (
+              <div className="sync-message">{syncMessage}</div>
+            )}
           </div>
-          <div className="stat-item">
-            <span className="stat-number">{agents.length}</span>
-            <span className="stat-label">Agents</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{tasks.length}</span>
-            <span className="stat-label">Tasks</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{communications.length}</span>
-            <span className="stat-label">Messages</span>
+          <div className="dashboard-stats">
+            <div className="stat-item">
+              <span className="stat-number">{sessions.length}</span>
+              <span className="stat-label">Sessions</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">{agents.length}</span>
+              <span className="stat-label">Agents</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">{tasks.length}</span>
+              <span className="stat-label">Tasks</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">{communications.length}</span>
+              <span className="stat-label">Messages</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="accordion">
-        <div className="accordion-item">
+      <div className="dashboard-content">
+        <div className="tab-navigation">
           <button 
-            className={`accordion-header ${activeAccordion === 'sessions' ? 'active' : ''}`}
-            onClick={() => setActiveAccordion(activeAccordion === 'sessions' ? '' : 'sessions')}
+            className={`tab-button ${activeTab === 'sessions' ? 'active' : ''}`}
+            onClick={() => setActiveTab('sessions')}
           >
-            🗂️ Orchestration Sessions
-            <span className="accordion-toggle">{activeAccordion === 'sessions' ? '−' : '+'}</span>
+            🗂️ Sessions ({sessions.length})
           </button>
-          {activeAccordion === 'sessions' && (
-            <div className="accordion-content">
-              <SessionsPanel />
-            </div>
-          )}
+          <button 
+            className={`tab-button ${activeTab === 'agents' ? 'active' : ''}`}
+            onClick={() => setActiveTab('agents')}
+          >
+            🤖 Agents ({agents.length})
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'tasks' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tasks')}
+          >
+            📋 Tasks ({tasks.length})
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'communications' ? 'active' : ''}`}
+            onClick={() => setActiveTab('communications')}
+          >
+            💬 Messages ({communications.length})
+          </button>
         </div>
 
-        <div className="accordion-item">
-          <button 
-            className={`accordion-header ${activeAccordion === 'agents' ? 'active' : ''}`}
-            onClick={() => setActiveAccordion(activeAccordion === 'agents' ? '' : 'agents')}
-          >
-            🤖 Active Agents
-            <span className="accordion-toggle">{activeAccordion === 'agents' ? '−' : '+'}</span>
-          </button>
-          {activeAccordion === 'agents' && (
-            <div className="accordion-content">
-              <AgentsPanel />
-            </div>
-          )}
-        </div>
-
-        <div className="accordion-item">
-          <button 
-            className={`accordion-header ${activeAccordion === 'tasks' ? 'active' : ''}`}
-            onClick={() => setActiveAccordion(activeAccordion === 'tasks' ? '' : 'tasks')}
-          >
-            📋 Recent Tasks
-            <span className="accordion-toggle">{activeAccordion === 'tasks' ? '−' : '+'}</span>
-          </button>
-          {activeAccordion === 'tasks' && (
-            <div className="accordion-content">
-              <TasksPanel />
-            </div>
-          )}
-        </div>
-
-        <div className="accordion-item">
-          <button 
-            className={`accordion-header ${activeAccordion === 'communications' ? 'active' : ''}`}
-            onClick={() => setActiveAccordion(activeAccordion === 'communications' ? '' : 'communications')}
-          >
-            💬 Communications Log
-            <span className="accordion-toggle">{activeAccordion === 'communications' ? '−' : '+'}</span>
-          </button>
-          {activeAccordion === 'communications' && (
-            <div className="accordion-content">
-              <CommunicationsPanel />
-            </div>
-          )}
+        <div className="tab-content">
+          {activeTab === 'sessions' && <SessionsPanel />}
+          {activeTab === 'agents' && <AgentsPanel />}
+          {activeTab === 'tasks' && <TasksPanel />}
+          {activeTab === 'communications' && <CommunicationsPanel />}
         </div>
       </div>
     </div>

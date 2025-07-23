@@ -288,8 +288,8 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
-  flex-shrink: 0; /* Don't allow shrinking */
-  max-height: 220px; /* Much smaller hard limit */
+  flex: 1; /* Take up remaining space in the control panel */
+  min-height: 200px; /* Minimum height to ensure usability */
   overflow: hidden; /* Prevent any overflow */
 }
 
@@ -305,9 +305,8 @@
   background: rgba(0, 0, 0, 0.2);
   border-radius: 5px;
   padding: 15px;
-  height: 150px; /* Much smaller fixed height */
-  max-height: 150px; /* Double constraint */
-  min-height: 150px; /* Force consistent height */
+  flex: 1; /* Take up remaining space in message-history container */
+  min-height: 150px; /* Minimum height to ensure usability */
   
   /* Custom scrollbar styles for better appearance */
   scrollbar-width: thin;
