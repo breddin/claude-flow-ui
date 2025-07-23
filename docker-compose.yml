@@ -35,6 +35,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        - REACT_APP_API_URL=http://localhost:9001
     ports:
       - "9000:3000"
     container_name: claude-flow-frontend-prod

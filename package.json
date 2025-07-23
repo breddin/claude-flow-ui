@@ -2,7 +2,7 @@
   "name": "claude-flow-ui",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:3001",
+  "proxy": "http://backend:3001",
   "type": "module",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",

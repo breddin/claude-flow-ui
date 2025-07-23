@@ -3,6 +3,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Accept build arguments
+ARG REACT_APP_API_URL=http://localhost:9001
+
 # Copy package files
 COPY package*.json ./
 
@@ -11,6 +14,9 @@ RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
+
+# Set environment variable for build
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 # Expose frontend port
 EXPOSE 3000

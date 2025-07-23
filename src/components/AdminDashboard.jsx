@@ -20,6 +20,9 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:9001';
+      console.log('Environment variable REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+      console.log('Using API URL:', apiUrl);
       const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -27,10 +30,10 @@ const AdminDashboard = () => {
 
       // Fetch all admin data in parallel
       const [sessionsRes, agentsRes, tasksRes, communicationsRes] = await Promise.all([
-        fetch('/api/admin/sessions', { headers }),
-        fetch('/api/admin/agents', { headers }),
-        fetch('/api/admin/tasks', { headers }),
-        fetch('/api/admin/communications', { headers })
+        fetch(`${apiUrl}/api/admin/sessions`, { headers }),
+        fetch(`${apiUrl}/api/admin/agents`, { headers }),
+        fetch(`${apiUrl}/api/admin/tasks`, { headers }),
+        fetch(`${apiUrl}/api/admin/communications`, { headers })
       ]);
 
       if (!sessionsRes.ok || !agentsRes.ok || !tasksRes.ok || !communicationsRes.ok) {

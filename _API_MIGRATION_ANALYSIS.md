@@ -309,11 +309,21 @@ POST /api/v1/integrations/mcp/execute
 - ✅ Audit logging and monitoring system
 - ✅ API key management for programmatic access
 
-#### Weeks 3-4: Advanced Features & Monitoring
-- Real-time monitoring dashboard with metrics
-- Advanced SPARC reasoning system integration
-- Performance analytics and optimization
-- WebSocket-based real-time communication
+#### Weeks 3-4: Advanced Features & Monitoring (🔄 IN PROGRESS)
+- 🔄 **Real-time monitoring dashboard with metrics** (PRIORITY - Admin Dashboard API fixes needed)
+  - ✅ **RESOLVED: Admin API Authentication Issue**
+    - Problem: Admin Dashboard showing 500 errors on all endpoints
+    - Root Cause: Missing tenant ID in authentication request
+    - Solution: Ensure proper login with tenant-aware credentials:
+      - Login: "bennie"
+      - Password: "P0stM0dern~" 
+      - **Tenant ID: "visualizehr"** (REQUIRED for multi-tenant auth)
+    - Technical Details: Admin endpoints require JWT token with `is_admin: true` and valid tenant context
+    - Frontend stores token as `accessToken` in localStorage and sends via `Authorization: Bearer {token}` header
+    - Authentication payload must include: `{"login": "bennie", "password": "xxxxxxx~", "tenant_id": "visualizehr"}`
+- 🔄 Advanced SPARC reasoning system integration
+- 🔄 Performance analytics and optimization
+- 🔄 WebSocket-based real-time communication
 
 #### Weeks 5-6: Integration APIs
 - Implement ruv-swarm API integration
@@ -324,6 +334,30 @@ POST /api/v1/integrations/mcp/execute
 - Comprehensive API testing
 - Performance optimization
 - API documentation and examples
+
+#### Phase 4: Infrastructure & Deployment (Follow-on)
+- **Docker Deployment Issues Resolution**
+  - ✅ **RESOLVED: Frontend Container API Configuration**
+    - Problem: Frontend making requests to wrong API URL (localhost:9000 instead of localhost:9001)
+    - Root Cause: Frontend container using incorrect API base URL in Docker environment
+    - Solution: 
+      - Updated AdminDashboard.jsx to use `process.env.REACT_APP_API_URL` environment variable
+      - Set `REACT_APP_API_URL=http://localhost:9001` in docker-compose.yml frontend environment
+      - **CRITICAL**: Always rebuild with `--no-cache` flag: `docker compose build --no-cache frontend`
+      - Restart frontend container: `docker compose restart frontend`
+      - Added debug logging to verify environment variable usage
+    - **Verification Steps**:
+      1. Check environment variable in container: `docker exec claude-flow-frontend-prod env | grep REACT_APP`
+      2. Open browser developer tools → Console to see debug output showing API URL being used
+      3. Network tab should show requests going to `localhost:9001` instead of `localhost:9000`
+  - ✅ **Container Rebuild Best Practices**: 
+    - **ALWAYS** use `--no-cache` flag for Docker builds to ensure fresh changes
+    - Verify environment variables are passed correctly to React app
+    - Add debug logging when troubleshooting environment variable issues
+  - Fix container rebuild and refresh issues
+  - Resolve frontend changes not appearing after rebuild
+  - Browser cache and container synchronization improvements
+  - Implement proper cache-busting strategies
 
 ### Benefits of API-Centric Approach
 
@@ -1547,3 +1581,105 @@ This implementation provides a solid foundation for visualizing and interacting 
 ## Conclusion
 
 The migration from CLI/file-system-centric to API-centric architecture will significantly improve Claude-Flow's scalability, maintainability, and integration capabilities while preserving existing functionality through compatibility layers. The modular nature of the current codebase makes this migration feasible with careful planning and phased implementation.
+
+## Troubleshooting Guide
+
+### Admin Dashboard Issues
+
+#### Problem: "Error Loading Admin Data, Failed to fetch admin data"
+**Symptoms:**
+- Console errors showing 500 (Internal Server Error) for admin endpoints
+- GET requests to `/api/admin/sessions`, `/api/admin/agents`, `/api/admin/tasks`, `/api/admin/communications` failing
+
+**Root Cause Analysis:**
+1. **Authentication Issue**: Admin endpoints require valid JWT token with admin privileges
+2. **Missing Tenant ID**: Multi-tenant authentication requires tenant context
+3. **Token Missing**: User not logged in or token expired
+4. **Insufficient Permissions**: User doesn't have admin role or `is_admin: true`
+
+**Solution Steps:**
+1. **Verify Login Credentials with Tenant ID**: Ensure login with admin account including tenant
+   ```bash
+   # Test login via API with tenant ID
+   curl -X POST http://localhost:9001/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"login":"bennie","password":"P0stM0dern~","tenant_id":"visualizehr"}'
+   ```
+
+2. **Check Token Storage**: Verify token exists in browser localStorage and includes tenant context
+   ```javascript
+   // Check in browser console
+   console.log('Access Token:', localStorage.getItem('accessToken'));
+   console.log('User:', JSON.parse(localStorage.getItem('user') || '{}'));
+   ```
+
+3. **Verify Admin Permissions and Tenant Context**: Ensure user has admin role and tenant information
+   ```javascript
+   const user = JSON.parse(localStorage.getItem('user') || '{}');
+   console.log('Is Admin:', user.is_admin);
+   console.log('Roles:', user.roles);
+   console.log('Tenant ID:', user.tenant_id);
+   console.log('Available Tenants:', user.available_tenants);
+   ```
+
+4. **Frontend Login Process**: Ensure proper login through UI includes tenant ID
+   - Open the React app at http://localhost:9000
+   - Fill in the login form with:
+     - Tenant ID: "visualizehr"
+     - Username: "bennie" 
+     - Password: "P0stM0dern~"
+   - Click Login and verify token is stored in localStorage
+
+5. **Test Admin Endpoint Manually**:
+   ```bash
+   # Replace {TOKEN} with actual token from localStorage
+   curl -X GET http://localhost:9001/api/admin/sessions \
+     -H "Authorization: Bearer {TOKEN}" \
+     -H "Content-Type: application/json"
+   ```
+
+**Prevention:**
+- **CRITICAL**: Always include tenant ID in login requests for multi-tenant authentication
+- Ensure login form validates tenant ID is provided before submission
+- Implement token refresh mechanism with tenant context preservation
+- Add better error handling for expired tokens
+- Show clear authentication status in UI including tenant information
+- Add token validation before making admin API calls
+
+#### Problem: Docker Container Changes Not Visible
+**Symptoms:**
+- Code changes not reflecting after container rebuild
+- Browser showing cached version despite successful Docker build
+
+**Solution Steps:**
+1. **Hard Browser Refresh**: Ctrl+F5 or Cmd+Shift+R
+2. **Clear Browser Cache**: Clear localStorage and application cache
+3. **Force Container Rebuild**:
+   ```bash
+   docker compose build --no-cache frontend
+   docker compose restart frontend
+   ```
+4. **Verify New Image**: Check image hash matches rebuild
+   ```bash
+   docker compose ps
+   docker images | grep claude-flow-ui-frontend
+   ```
+
+**Advanced Debugging:**
+1. **Check Container Logs**:
+   ```bash
+   docker logs claude-flow-frontend-prod --tail 50
+   docker logs claude-flow-backend-prod --tail 50
+   ```
+
+2. **Verify File Changes Inside Container**:
+   ```bash
+   docker exec -it claude-flow-frontend-prod ls -la /app/build
+   ```
+
+3. **Test API Connectivity**:
+   ```bash
+   # Test from host
+   curl http://localhost:9000/health
+   curl http://localhost:9001/health
+   ```
