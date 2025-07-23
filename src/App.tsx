@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import QueenAgentImage from './QueenAgent.webp';
+import Login from './components/Login';
+import Header from './components/Header';
+import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 
 // Speech Recognition Types
@@ -100,11 +103,135 @@ function QueenAgent({ status }: { status: 'idle' | 'listening' | 'processing' | 
   );
 }
 
+// Research Agent Component
+function ResearchAgent({ status, isActive }: { status: 'idle' | 'researching' | 'complete', isActive: boolean }) {
+  const [animationPhase, setAnimationPhase] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAnimationPhase(prev => (prev + 0.1) % (Math.PI * 2));
+    }, 50);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'idle': return '#6C7B7F';        // Gray - waiting
+      case 'researching': return '#50E3C2'; // Teal - researching
+      case 'complete': return '#4A90E2';    // Blue - complete
+      default: return '#6C7B7F';
+    }
+  };
+
+  const floatingOffset = Math.sin(animationPhase * 1.2) * 8;
+  const opacity = isActive ? 1 : 0.5;
+
+  return (
+    <div className="research-agent-container" style={{ opacity }}>
+      <div className="research-particles">
+        {[...Array(6)].map((_, i) => (
+          <div 
+            key={i}
+            className="research-particle"
+            style={{
+              '--angle': `${i * 60}deg`,
+              '--delay': `${i * 0.3}s`
+            } as React.CSSProperties}
+          >
+            🔍
+          </div>
+        ))}
+      </div>
+      
+      <div 
+        className="research-agent-icon"
+        style={{
+          transform: `translateY(${floatingOffset}px)`,
+          boxShadow: `0 0 20px ${getStatusColor()}`,
+          borderColor: getStatusColor(),
+          backgroundColor: getStatusColor()
+        }}
+      >
+        🧠
+      </div>
+      
+      <div className="status-text">
+        Research Agent: {status.toUpperCase()}
+      </div>
+    </div>
+  );
+}
+
+// Implementation Agent Component
+function ImplementationAgent({ status, isActive }: { status: 'idle' | 'implementing' | 'complete', isActive: boolean }) {
+  const [animationPhase, setAnimationPhase] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAnimationPhase(prev => (prev + 0.1) % (Math.PI * 2));
+    }, 50);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'idle': return '#6C7B7F';        // Gray - waiting
+      case 'implementing': return '#F5A623'; // Orange - implementing
+      case 'complete': return '#7ED321';    // Green - complete
+      default: return '#6C7B7F';
+    }
+  };
+
+  const floatingOffset = Math.sin(animationPhase * 0.8) * 12;
+  const opacity = isActive ? 1 : 0.5;
+
+  return (
+    <div className="implementation-agent-container" style={{ opacity }}>
+      <div className="implementation-particles">
+        {[...Array(5)].map((_, i) => (
+          <div 
+            key={i}
+            className="implementation-particle"
+            style={{
+              '--angle': `${i * 72}deg`,
+              '--delay': `${i * 0.25}s`
+            } as React.CSSProperties}
+          >
+            ⚙️
+          </div>
+        ))}
+      </div>
+      
+      <div 
+        className="implementation-agent-icon"
+        style={{
+          transform: `translateY(${floatingOffset}px)`,
+          boxShadow: `0 0 20px ${getStatusColor()}`,
+          borderColor: getStatusColor(),
+          backgroundColor: getStatusColor()
+        }}
+      >
+        🛠️
+      </div>
+      
+      <div className="status-text">
+        Implementation Agent: {status.toUpperCase()}
+      </div>
+    </div>
+  );
+}
+
 // Input Panel Component
-function InputPanel({ onSubmit }: { onSubmit: (message: string) => void }) {
+function InputPanel({ onSubmit, onSingleAgentSubmit }: { 
+  onSubmit: (message: string) => void,
+  onSingleAgentSubmit: (message: string) => void 
+}) {
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  const [mode, setMode] = useState<'multi' | 'single'>('multi');
 
   useEffect(() => {
     // Initialize Speech Recognition if available
@@ -144,7 +271,11 @@ function InputPanel({ onSubmit }: { onSubmit: (message: string) => void }) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim()) {
-      onSubmit(input.trim());
+      if (mode === 'multi') {
+        onSubmit(input.trim());
+      } else {
+        onSingleAgentSubmit(input.trim());
+      }
       setInput('');
     }
   };
@@ -171,6 +302,20 @@ function InputPanel({ onSubmit }: { onSubmit: (message: string) => void }) {
     <div className="input-panel">
       <div className="input-header">
         <h3>Command Interface</h3>
+        <div className="mode-selector">
+          <button 
+            className={mode === 'multi' ? 'active' : ''}
+            onClick={() => setMode('multi')}
+          >
+            🤖 Multi-Agent
+          </button>
+          <button 
+            className={mode === 'single' ? 'active' : ''}
+            onClick={() => setMode('single')}
+          >
+            👑 Queen Only
+          </button>
+        </div>
         <button 
           className={`voice-button ${isListening ? 'listening' : ''}`}
           onClick={startVoiceInput}
@@ -189,20 +334,22 @@ function InputPanel({ onSubmit }: { onSubmit: (message: string) => void }) {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Enter command for Queen Agent..."
+          placeholder={mode === 'multi' ? 
+            "Enter command for multi-agent orchestration..." : 
+            "Enter command for Queen Agent only..."}
           className="command-input"
         />
         <button type="submit" className="submit-button">
-          Send Command
+          {mode === 'multi' ? 'Send to Agents' : 'Send to Queen'}
         </button>
       </form>
       
       <div className="quick-commands">
         <h4>Quick Commands:</h4>
-        <button onClick={() => setInput("Deploy to production")}>Deploy</button>
-        <button onClick={() => setInput("Run tests")}>Test</button>
-        <button onClick={() => setInput("Check system status")}>Status</button>
-        <button onClick={() => setInput("Create new agent")}>New Agent</button>
+        <button onClick={() => setInput("How do I implement user authentication in a React app?")}>Auth Implementation</button>
+        <button onClick={() => setInput("Design a database schema for an e-commerce platform")}>Database Design</button>
+        <button onClick={() => setInput("Create a deployment strategy for microservices")}>Deployment Strategy</button>
+        <button onClick={() => setInput("Optimize React performance for large datasets")}>Performance Optimization</button>
       </div>
     </div>
   );
@@ -210,18 +357,79 @@ function InputPanel({ onSubmit }: { onSubmit: (message: string) => void }) {
 
 function App() {
   const [agentStatus, setAgentStatus] = useState<'idle' | 'listening' | 'processing' | 'responding'>('idle');
+  const [researchStatus, setResearchStatus] = useState<'idle' | 'researching' | 'complete'>('idle');
+  const [implementationStatus, setImplementationStatus] = useState<'idle' | 'implementing' | 'complete'>('idle');
   const [messages, setMessages] = useState<string[]>([]);
+  const [orchestrationActive, setOrchestrationActive] = useState(false);
+  const [currentStage, setCurrentStage] = useState<'analysis' | 'research' | 'implementation' | 'synthesis' | 'complete'>('analysis');
+  
+  // Reference for auto-scrolling messages
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+
+  // Check for existing authentication on app load
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    const userData = localStorage.getItem('user');
+    
+    if (token && userData && userData !== 'undefined') {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  const handleLogin = (token: string, userData: any) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setIsAuthenticated(false);
+    setShowAdminDashboard(false);
+  };
+
+  const toggleAdminDashboard = () => {
+    setShowAdminDashboard(!showAdminDashboard);
+  };
 
   const handleCommand = async (command: string) => {
     setMessages(prev => [...prev, `You: ${command}`]);
+    setOrchestrationActive(true);
     setAgentStatus('processing');
+    setResearchStatus('idle');
+    setImplementationStatus('idle');
+    setCurrentStage('analysis');
     
     try {
-      // Send command to backend API
-      const response = await fetch('http://localhost:3001/api/claude', {
+      const token = localStorage.getItem('accessToken');
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      
+      // Send command to multi-agent orchestration endpoint
+      const response = await fetch(`${apiUrl}/api/multi-agent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ prompt: command })
       });
@@ -233,6 +441,158 @@ function App() {
       setAgentStatus('responding');
       
       // Handle the streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let currentAgentResponse = '';
+      let currentAgent = 'queen';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.type === 'agent_status') {
+                  // Update agent status
+                  if (data.agent === 'queen') {
+                    if (data.status === 'analyzing') {
+                      setAgentStatus('processing');
+                      setCurrentStage('analysis');
+                    } else if (data.status === 'synthesizing') {
+                      setAgentStatus('responding');
+                      setCurrentStage('synthesis');
+                    }
+                  } else if (data.agent === 'research') {
+                    setResearchStatus('researching');
+                    setCurrentStage('research');
+                  } else if (data.agent === 'implementation') {
+                    setImplementationStatus('implementing');
+                    setCurrentStage('implementation');
+                  }
+                  
+                  // Add status message
+                  setMessages(prev => [...prev, `🤖 ${data.message}`]);
+                  
+                } else if (data.type === 'agent_response') {
+                  // Handle agent responses - display them immediately
+                  const agentName = data.agent === 'queen' ? 'Queen Agent' : 
+                                  data.agent === 'research' ? 'Research Agent' : 
+                                  'Implementation Agent';
+                  
+                  setMessages(prev => [...prev, `${agentName}: ${data.content}`]);
+                  
+                  // Update agent completion status
+                  if (data.stage === 'analysis' || data.agent === 'queen') {
+                    setAgentStatus('idle'); // Queen agent completed, back to idle
+                  } else if (data.stage === 'research' || data.agent === 'research') {
+                    setResearchStatus('complete');
+                  } else if (data.stage === 'implementation' || data.agent === 'implementation') {
+                    setImplementationStatus('complete');
+                  }
+                  
+                } else if (data.type === 'orchestration_complete') {
+                  // Final completion
+                  setAgentStatus('idle');
+                  setResearchStatus('complete');
+                  setImplementationStatus('complete');
+                  setCurrentStage('complete');
+                  setOrchestrationActive(false);
+                  
+                  // Display all agent responses from the stages data
+                  if (data.stages) {
+                    if (data.stages.analysis) {
+                      setMessages(prev => [...prev, `Queen Agent: ${data.stages.analysis}`]);
+                    }
+                    if (data.stages.research) {
+                      setMessages(prev => [...prev, `Research Agent: ${data.stages.research}`]);
+                    }
+                    if (data.stages.implementation) {
+                      setMessages(prev => [...prev, `Implementation Agent: ${data.stages.implementation}`]);
+                    }
+                  }
+                  
+                  setMessages(prev => [...prev, `✅ Multi-agent orchestration completed successfully!`]);
+                  
+                } else if (data.type === 'error') {
+                  const errorMessage = data.details ? 
+                    `${data.message}: ${data.details}` : 
+                    data.message;
+                  setMessages(prev => [...prev, `❌ Error: ${errorMessage}`]);
+                  setOrchestrationActive(false);
+                  setAgentStatus('idle');
+                  setResearchStatus('idle');
+                  setImplementationStatus('idle');
+                }
+              } catch (e) {
+                // Ignore malformed JSON
+              }
+            }
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('API Error:', error);
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      
+      let errorMessage = '';
+      if (error instanceof Error) {
+        if (error.message.includes('Authentication required') || error.message.includes('401')) {
+          errorMessage = 'Authentication failed. Please check your API credentials.';
+        } else if (error.message.includes('insufficient credits') || error.message.includes('credit balance')) {
+          errorMessage = 'API service has insufficient credits. Please check your account balance.';
+        } else if (error.message.includes('rate limit') || error.message.includes('429')) {
+          errorMessage = 'API rate limit exceeded. Please wait a moment and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = `Connection failed. Please ensure the backend server is running at ${apiUrl}.`;
+        } else {
+          errorMessage = error.message;
+        }
+      } else {
+        errorMessage = 'Unknown error occurred';
+      }
+      
+      setMessages(prev => [...prev, `Queen Agent: I apologize, but I encountered an issue during multi-agent orchestration: ${errorMessage}`]);
+      setOrchestrationActive(false);
+    } finally {
+      setAgentStatus('idle');
+      setResearchStatus('idle');
+      setImplementationStatus('idle');
+    }
+  };
+
+  const handleSingleAgentCommand = async (command: string) => {
+    setMessages(prev => [...prev, `You (Single Agent): ${command}`]);
+    setAgentStatus('processing');
+    
+    try {
+      const token = localStorage.getItem('accessToken');
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      
+      // Send command to original single-agent endpoint
+      const response = await fetch(`${apiUrl}/api/claude`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ prompt: command })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      setAgentStatus('responding');
+      
+      // Handle the streaming response (original implementation)
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullResponse = '';
@@ -253,8 +613,17 @@ function App() {
                   fullResponse += data.content;
                 } else if (data.type === 'complete') {
                   fullResponse = data.content || fullResponse;
+                } else if (data.type === 'error') {
+                  // Handle backend error messages
+                  const errorMessage = data.details ? 
+                    `${data.content}: ${data.details}` : 
+                    data.content;
+                  throw new Error(errorMessage);
                 }
               } catch (e) {
+                if (e instanceof Error && e.message.includes('API')) {
+                  throw e; // Re-throw API errors
+                }
                 // Ignore malformed JSON
               }
             }
@@ -267,28 +636,125 @@ function App() {
       
     } catch (error) {
       console.error('API Error:', error);
-      setMessages(prev => [...prev, `Queen Agent: I apologize, but I'm experiencing a connection issue. Please ensure the backend server is running on port 3001. Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      
+      let errorMessage = '';
+      if (error instanceof Error) {
+        if (error.message.includes('Authentication required') || error.message.includes('401')) {
+          errorMessage = 'Authentication failed. Please check your API credentials.';
+        } else if (error.message.includes('insufficient credits') || error.message.includes('credit balance')) {
+          errorMessage = 'API service has insufficient credits. Please check your account balance.';
+        } else if (error.message.includes('rate limit') || error.message.includes('429')) {
+          errorMessage = 'API rate limit exceeded. Please wait a moment and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = `Connection failed. Please ensure the backend server is running at ${apiUrl}.`;
+        } else {
+          errorMessage = error.message;
+        }
+      } else {
+        errorMessage = 'Unknown error occurred';
+      }
+      
+      setMessages(prev => [...prev, `Queen Agent: I apologize, but I encountered an issue: ${errorMessage}`]);
     } finally {
       setAgentStatus('idle');
     }
   };
 
+  // If not authenticated, show login
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  // If authenticated but user data not yet loaded, show loading
+  if (!user) {
+    return (
+      <div className="App">
+        <div className="loading-container">
+          <p>Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If showing admin dashboard
+  if (showAdminDashboard) {
+    return (
+      <div className="App">
+        <Header 
+          user={user} 
+          onLogout={handleLogout} 
+          onShowAdmin={toggleAdminDashboard}
+          showingAdmin={true}
+        />
+        <AdminDashboard />
+      </div>
+    );
+  }
+
   return (
     <div className="App">
-      <div className="app-header">
-        <h1>Claude Flow UI - AI Agent Orchestration</h1>
-        <p>Secure Container • Memory-Enhanced • Voice & Text Interface</p>
-      </div>
+      <Header 
+        user={user} 
+        onLogout={handleLogout} 
+        onShowAdmin={toggleAdminDashboard}
+        showingAdmin={false}
+      />
       
-      <div className="main-interface">
-        {/* Queen Agent Visualization */}
+      {orchestrationActive && (
+        <div className="orchestration-status">
+          <span>🔄 Multi-Agent Orchestration Active - Stage: {currentStage.toUpperCase()}</span>
+        </div>
+      )}
+      
+      <div className="main-interface">&lt;
+        {/* Multi-Agent Visualization */}
         <div className="agent-viewport">
-          <QueenAgent status={agentStatus} />
+          <div className="agents-grid">
+            {/* Queen Agent - Center */}
+            <div className="queen-position">
+              <QueenAgent status={agentStatus} />
+            </div>
+            
+            {/* Research Agent - Left */}
+            <div className="research-position">
+              <ResearchAgent 
+                status={researchStatus} 
+                isActive={orchestrationActive && (currentStage === 'research' || researchStatus === 'complete')} 
+              />
+            </div>
+            
+            {/* Implementation Agent - Right */}
+            <div className="implementation-position">
+              <ImplementationAgent 
+                status={implementationStatus} 
+                isActive={orchestrationActive && (currentStage === 'implementation' || implementationStatus === 'complete')} 
+              />
+            </div>
+          </div>
+          
+          {/* Orchestration Flow Indicators */}
+          {orchestrationActive && (
+            <div className="flow-indicators">
+              <div className={`flow-arrow queen-to-research ${currentStage === 'research' ? 'active' : ''}`}>
+                ➤
+              </div>
+              <div className={`flow-arrow research-to-implementation ${currentStage === 'implementation' ? 'active' : ''}`}>
+                ➤
+              </div>
+              <div className={`flow-arrow implementation-to-queen ${currentStage === 'synthesis' ? 'active' : ''}`}>
+                ➤
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Control Panel */}
         <div className="control-panel">
-          <InputPanel onSubmit={handleCommand} />
+          <InputPanel 
+            onSubmit={handleCommand} 
+            onSingleAgentSubmit={handleSingleAgentCommand}
+          />
           
           {/* Message History */}
           <div className="message-history">
@@ -301,6 +767,7 @@ function App() {
                   <div key={idx} className="message">{msg}</div>
                 ))
               )}
+              <div ref={messagesEndRef} />
             </div>
           </div>
         </div>
@@ -311,6 +778,12 @@ function App() {
         <span>🧠 Memory System: Online</span>
         <span>🔗 Claude Code SDK: Connected</span>
         <span>📡 Status: {agentStatus}</span>
+        {orchestrationActive && (
+          <>
+            <span>🔍 Research: {researchStatus}</span>
+            <span>🛠️ Implementation: {implementationStatus}</span>
+          </>
+        )}
       </div>
     </div>
   );

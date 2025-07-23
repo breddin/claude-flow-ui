@@ -1,0 +1,91 @@
+# Development Docker Compose Configuration
+
+services:
+  # PostgreSQL Database (using Sensu's existing database connection)
+  # Note: This assumes you have access to the Sensu PostgreSQL database
+  # If you need a local database for testing, uncomment the postgres service below
+  
+  # postgres:
+  #   image: postgres:15
+  #   container_name: claude-flow-postgres
+  #   environment:
+  #     POSTGRES_DB: sensumaster_dev
+  #     POSTGRES_USER: ${DB_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - claude-flow-network
+
+  # Backend API Server
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: claude-flow-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      # Database connection (update these to match your Sensu database)
+      - DB_HOST=${DB_HOST:-sensumaster.cluster-ro-cbeagbiwllr7.us-east-1.rds.amazonaws.com}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-sensumaster_dev}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_SSL=true
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET:-your-super-secure-jwt-secret-key-here-min-32-chars}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN:-7d}
+      # Password Configuration
+      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
+      - VISUALIZEHR_SALT=${VISUALIZEHR_SALT:-visualizehr_salt}
+      # Anthropic API
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - claude-flow-network
+    # depends_on:
+    #   - postgres
+
+  # Frontend React Application
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: claude-flow-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - REACT_APP_API_URL=http://localhost:3001
+      - GENERATE_SOURCEMAP=false
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - claude-flow-network
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:
+
+networks:
+  claude-flow-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

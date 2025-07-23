@@ -39,6 +39,7 @@
   flex: 1;
   display: flex;
   height: calc(100vh - 160px);
+  overflow: hidden; /* Prevent any overflow from this container */
 }
 
 .agent-viewport {
@@ -145,7 +146,10 @@
   background: rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px; /* Reduced gap */
+  height: 100%; /* Take full height of main interface */
+  max-height: calc(100vh - 240px); /* More conservative viewport constraint */
+  overflow-y: auto; /* Allow control panel itself to scroll if needed */
 }
 
 .input-panel {
@@ -153,6 +157,7 @@
   border-radius: 10px;
   padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0; /* Don't allow this to shrink */
 }
 
 .input-header {
@@ -277,27 +282,55 @@
 }
 
 .message-history {
-  flex: 1;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
   padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
+  flex-shrink: 0; /* Don't allow shrinking */
+  max-height: 220px; /* Much smaller hard limit */
+  overflow: hidden; /* Prevent any overflow */
 }
 
 .message-history h4 {
   color: #4A90E2;
   margin-bottom: 15px;
   font-size: 1.1rem;
+  flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .messages {
-  flex: 1;
   overflow-y: auto;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 5px;
   padding: 15px;
+  height: 150px; /* Much smaller fixed height */
+  max-height: 150px; /* Double constraint */
+  min-height: 150px; /* Force consistent height */
+  
+  /* Custom scrollbar styles for better appearance */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(74, 144, 226, 0.5) rgba(255, 255, 255, 0.1);
+}
+
+/* Webkit scrollbar styles for Chrome/Safari */
+.messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messages::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background: rgba(74, 144, 226, 0.5);
+  border-radius: 4px;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 144, 226, 0.7);
 }
 
 .message {
@@ -314,7 +347,8 @@
   text-align: center;
   color: rgba(255, 255, 255, 0.6);
   font-style: italic;
-  padding: 40px 20px;
+  padding: 10px; /* Much smaller padding */
+  font-size: 0.9rem; /* Smaller font size */
 }
 
 .status-bar {
@@ -361,4 +395,309 @@
     padding: 10px;
     gap: 10px;
   }
+}
+
+/* Multi-Agent Layout Styles */
+.orchestration-status {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: rgba(189, 16, 224, 0.2);
+  border-radius: 20px;
+  border: 1px solid rgba(189, 16, 224, 0.3);
+  display: inline-block;
+  font-size: 0.9rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.agents-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.queen-position {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.research-position {
+  position: absolute;
+  top: 30%;
+  left: 20%;
+  z-index: 2;
+}
+
+.implementation-position {
+  position: absolute;
+  top: 30%;
+  right: 20%;
+  z-index: 2;
+}
+
+/* Research Agent Styles */
+.research-agent-container {
+  position: relative;
+  text-align: center;
+  transition: opacity 0.3s ease;
+}
+
+.research-particles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.research-particle {
+  position: absolute;
+  font-size: 1.2rem;
+  animation: research-orbit 3s infinite linear;
+  transform-origin: 0 40px;
+  transform: rotate(var(--angle)) translateX(40px) rotate(calc(-1 * var(--angle)));
+  animation-delay: var(--delay);
+}
+
+@keyframes research-orbit {
+  from { transform: rotate(var(--angle)) translateX(40px) rotate(calc(-1 * var(--angle))); }
+  to { transform: rotate(calc(var(--angle) + 360deg)) translateX(40px) rotate(calc(-1 * (var(--angle) + 360deg))); }
+}
+
+.research-agent-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  border: 3px solid;
+  margin: 0 auto 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(80, 227, 194, 0.3);
+}
+
+/* Implementation Agent Styles */
+.implementation-agent-container {
+  position: relative;
+  text-align: center;
+  transition: opacity 0.3s ease;
+}
+
+.implementation-particles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.implementation-particle {
+  position: absolute;
+  font-size: 1.1rem;
+  animation: implementation-orbit 4s infinite linear;
+  transform-origin: 0 45px;
+  transform: rotate(var(--angle)) translateX(45px) rotate(calc(-1 * var(--angle)));
+  animation-delay: var(--delay);
+}
+
+@keyframes implementation-orbit {
+  from { transform: rotate(var(--angle)) translateX(45px) rotate(calc(-1 * var(--angle))); }
+  to { transform: rotate(calc(var(--angle) + 360deg)) translateX(45px) rotate(calc(-1 * (var(--angle) + 360deg))); }
+}
+
+.implementation-agent-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  border: 3px solid;
+  margin: 0 auto 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(245, 166, 35, 0.3);
+}
+
+/* Flow Indicators */
+.flow-indicators {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.flow-arrow {
+  position: absolute;
+  font-size: 2rem;
+  color: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.flow-arrow.active {
+  color: #4A90E2;
+  text-shadow: 0 0 10px #4A90E2;
+  animation: flow-pulse 1.5s infinite;
+}
+
+@keyframes flow-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+.queen-to-research {
+  top: 45%;
+  left: 35%;
+  transform: rotate(-30deg);
+}
+
+.research-to-implementation {
+  top: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.implementation-to-queen {
+  top: 45%;
+  right: 35%;
+  transform: rotate(30deg);
+}
+
+/* Mode Selector */
+.mode-selector {
+  display: flex;
+  gap: 10px;
+  margin: 0 20px;
+}
+
+.mode-selector button {
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.mode-selector button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-selector button.active {
+  background: rgba(74, 144, 226, 0.3);
+  border-color: #4A90E2;
+  box-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
+}
+
+/* Updated Input Header Layout */
+.input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.input-header h3 {
+  flex: 1;
+  min-width: 150px;
+}
+
+/* Enhanced Status Text for Agents */
+.status-text {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive updates for multi-agent layout */
+@media (max-width: 768px) {
+  .research-position {
+    top: 15%;
+    left: 10%;
+  }
+  
+  .implementation-position {
+    top: 15%;
+    right: 10%;
+  }
+  
+  .queen-position {
+    top: 60%;
+  }
+  
+  .research-agent-icon,
+  .implementation-agent-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+  }
+  
+  .flow-arrow {
+    font-size: 1.5rem;
+  }
+  
+  .queen-to-research {
+    top: 35%;
+    left: 25%;
+  }
+  
+  .implementation-to-queen {
+    top: 35%;
+    right: 25%;
+  }
+  
+  .mode-selector {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .input-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Loading Container Styles */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.loading-container p {
+  font-size: 1.2rem;
+  opacity: 0.8;
+  animation: pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
 }
